@@ -6,7 +6,7 @@ import { Topbar } from '@/components/layout/Topbar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { AzizaWidget } from '@/components/layout/AzizaWidget';
 import { CommandPalette } from '@/components/layout/CommandPalette';
-import { Tour } from '@/components/layout/Tour';
+import { TOUR_EVENT, Tour } from '@/components/layout/Tour';
 import { useT } from '@/app/i18n';
 
 export function AppLayout() {
@@ -22,6 +22,12 @@ export function AppLayout() {
     window.scrollTo(0, 0);
     mainRef.current?.focus({ preventScroll: true });
   }, [pathname]);
+
+  useEffect(() => {
+    const close = () => setMobileOpen(false);
+    window.addEventListener(TOUR_EVENT, close);
+    return () => window.removeEventListener(TOUR_EVENT, close);
+  }, []);
 
   const openSearch = useCallback(() => setSearch(true), []);
 

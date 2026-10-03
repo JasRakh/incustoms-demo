@@ -1,0 +1,172 @@
+import { Box, Card, Chip, IconButton, InputAdornment, Stack, Table, TableBody, TableCell, TableContainer, TableFooter, TableHead, TableRow, TextField, Tooltip, Typography, type TextFieldProps } from '@mui/material';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { CircleCheck, Trash2, TriangleAlert } from 'lucide-react';
+import { num } from '@/lib/format';
+import { Term } from '@/components/common/Term';
+import { hsInfo, type Position } from '@/pages/tools/calcModel';
+
+interface Props {
+  positions: Position[];
+  currency: string;
+  onChange: (id: string, patch: Partial<Position>) => void;
+  onRemove: (id: string) => void;
+}
+
+const cellInputSx = {
+  '& .MuiOutlinedInput-root': { height: 38, fontSize: 14, bgcolor: 'background.paper' },
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+  '& input[type=number]': { MozAppearance: 'textfield' },
+  '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', m: 0 },
+};
+
+function Cell({ align, ...props }: TextFieldProps & { align?: 'right' }) {
+  return <TextField size="small" fullWidth sx={cellInputSx} {...props} inputProps={{ ...props.inputProps, style: { textAlign: align ?? 'left' } }} />;
+}
+
+function HsField({ p, onChange }: { p: Position; onChange: Props['onChange'] }) {
+  const info = hsInfo(p.hs);
+  const status = !p.hs ? null : info
+    ? <Tooltip title={`${info.label} · пошлина ${info.duty}%`}><Box component="span" sx={{ display: 'flex', color: 'success.main' }} aria-label={`Код найден: ${info.label}`}><CircleCheck size={16} /></Box></Tooltip>
+    : <Tooltip title="Код не найден в демо-базе — будет применена ставка 10%"><Box component="span" sx={{ display: 'flex', color: 'warning.main' }} aria-label="Код не найден"><TriangleAlert size={16} /></Box></Tooltip>;
+  return (
+    <Cell
+      placeholder="0000 00 000 0"
+      value={p.hs}
+      onChange={e => onChange(p.id, { hs: e.target.value })}
+      inputProps={{ 'aria-label': 'Код ТН ВЭД', inputMode: 'numeric' }}
+      InputProps={{ endAdornment: status && <InputAdornment position="end">{status}</InputAdornment> }}
+    />
+  );
+}
+
+function DutyChip({ hs }: { hs: string }) {
+  const info = hsInfo(hs);
+  if (!hs) return <Typography variant="body2" color="text.disabled">—</Typography>;
+  return <Chip size="small" label={info ? `${info.duty}%` : '10%*'} sx={{ height: 22, bgcolor: info ? 'action.hover' : '#fef3c7', color: info ? 'text.primary' : '#854d0e', fontWeight: 600 }} />;
+}
+
+const numberProps = (label: string, step = 1) => ({ 'aria-label': label, min: 0, step, inputMode: 'decimal' as const });
+
+const TABLE_MIN_WIDTH = 960;
+
+function useWidth() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    ro.observe(el);
+    setWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, width };
+}
+
+export function PositionsEditor(props: Props) {
+  const { ref, width } = useWidth();
+  return <Box ref={ref}>{width > 0 && <PositionsView {...props} compact={width < TABLE_MIN_WIDTH} />}</Box>;
+}
+
+function PositionsView({ positions, currency, onChange, onRemove, compact }: Props & { compact: boolean }) {
+  const totalSum = positions.reduce((s, p) => s + p.qty * p.unitPrice, 0);
+  const totalQty = positions.reduce((s, p) => s + p.qty, 0);
+  const totalWeight = positions.reduce((s, p) => s + p.qty * p.weight, 0);
+  const setNum = (id: string, key: 'qty' | 'unitPrice' | 'weight', v: string) => onChange(id, { [key]: Math.max(0, Number(v) || 0) });
+
+  if (compact) {
+    return (
+      <Stack spacing={1.25}>
+        {positions.map((p, i) => (
+          <Card key={p.id} sx={{ p: 1.5, bgcolor: 'action.hover', borderColor: 'transparent' }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.25 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>{i + 1}.</Typography>
+              <Cell placeholder="Наименование товара" value={p.name} onChange={e => onChange(p.id, { name: e.target.value })} inputProps={{ 'aria-label': 'Наименование' }} />
+              <IconButton aria-label={`Удалить позицию ${p.name}`} onClick={() => onRemove(p.id)}><Trash2 size={17} /></IconButton>
+            </Stack>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+              <Box sx={{ gridColumn: '1 / -1' }}>
+                <Typography variant="caption" color="text.secondary">ТН ВЭД</Typography>
+                <HsField p={p} onChange={onChange} />
+              </Box>
+              <Box><Typography variant="caption" color="text.secondary">Кол-во</Typography><Cell align="right" type="number" value={p.qty} onChange={e => setNum(p.id, 'qty', e.target.value)} inputProps={numberProps('Количество')} /></Box>
+              <Box><Typography variant="caption" color="text.secondary">Цена, {currency}</Typography><Cell align="right" type="number" value={p.unitPrice} onChange={e => setNum(p.id, 'unitPrice', e.target.value)} inputProps={numberProps('Цена', 0.01)} /></Box>
+              <Box><Typography variant="caption" color="text.secondary">Вес ед., кг</Typography><Cell align="right" type="number" value={p.weight} onChange={e => setNum(p.id, 'weight', e.target.value)} inputProps={numberProps('Вес', 0.1)} /></Box>
+              <Box sx={{ textAlign: 'right', alignSelf: 'end', pb: 0.75 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Сумма</Typography>
+                <Typography fontWeight={700}>{num(p.qty * p.unitPrice)}</Typography>
+              </Box>
+            </Box>
+          </Card>
+        ))}
+        <Stack direction="row" justifyContent="space-between" sx={{ px: 1.5, pt: 0.5 }}>
+          <Typography variant="body2" color="text.secondary">{totalQty} шт · {num(totalWeight, 1)} кг</Typography>
+          <Typography fontWeight={700}>{num(totalSum)} {currency}</Typography>
+        </Stack>
+      </Stack>
+    );
+  }
+
+  return (
+    <TableContainer>
+      <Table size="small" sx={{ tableLayout: 'fixed', '& td, & th': { px: 1, borderColor: 'divider' }, '& tbody td': { py: 1 } }}>
+        <colgroup>
+          <col style={{ width: 36 }} />
+          <col />
+          <col style={{ width: 180 }} />
+          <col style={{ width: 92 }} />
+          <col style={{ width: 112 }} />
+          <col style={{ width: 100 }} />
+          <col style={{ width: 84 }} />
+          <col style={{ width: 128 }} />
+          <col style={{ width: 48 }} />
+        </colgroup>
+        <TableHead>
+          <TableRow>
+            <TableCell>#</TableCell>
+            <TableCell>Товар</TableCell>
+            <TableCell><Term tip="Код товара по ТН ВЭД определяет ставку пошлины">ТН ВЭД</Term></TableCell>
+            <TableCell align="right">Кол-во</TableCell>
+            <TableCell align="right">Цена, {currency}</TableCell>
+            <TableCell align="right">Вес ед., кг</TableCell>
+            <TableCell align="center"><Term tip="Ставка пошлины по коду ТН ВЭД (демо-база). * — код не найден, применена ставка 10%">Пошлина</Term></TableCell>
+            <TableCell align="right">Сумма, {currency}</TableCell>
+            <TableCell />
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {positions.map((p, i) => (
+            <TableRow key={p.id} hover sx={{ '&:hover .row-del': { opacity: 1 } }}>
+              <TableCell sx={{ color: 'text.secondary' }}>{i + 1}</TableCell>
+              <TableCell><Cell placeholder="Наименование товара" value={p.name} onChange={e => onChange(p.id, { name: e.target.value })} inputProps={{ 'aria-label': 'Наименование' }} /></TableCell>
+              <TableCell><HsField p={p} onChange={onChange} /></TableCell>
+              <TableCell><Cell align="right" type="number" value={p.qty} onChange={e => setNum(p.id, 'qty', e.target.value)} inputProps={numberProps('Количество')} /></TableCell>
+              <TableCell><Cell align="right" type="number" value={p.unitPrice} onChange={e => setNum(p.id, 'unitPrice', e.target.value)} inputProps={numberProps('Цена', 0.01)} /></TableCell>
+              <TableCell><Cell align="right" type="number" value={p.weight} onChange={e => setNum(p.id, 'weight', e.target.value)} inputProps={numberProps('Вес', 0.1)} /></TableCell>
+              <TableCell align="center"><DutyChip hs={p.hs} /></TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{num(p.qty * p.unitPrice)}</TableCell>
+              <TableCell align="center">
+                <Tooltip title="Удалить позицию">
+                  <IconButton className="row-del" size="small" aria-label={`Удалить позицию ${p.name}`} onClick={() => onRemove(p.id)} sx={{ opacity: 0.55, '&:focus-visible': { opacity: 1 } }}><Trash2 size={16} /></IconButton>
+                </Tooltip>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+        <TableFooter>
+          <TableRow sx={{ '& td': { borderBottom: 0, pt: 1.5, fontSize: 14, color: 'text.primary' } }}>
+            <TableCell />
+            <TableCell sx={{ fontWeight: 600 }}>Итого</TableCell>
+            <TableCell />
+            <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>{totalQty}</TableCell>
+            <TableCell />
+            <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary !important' }}>{num(totalWeight, 1)} кг</TableCell>
+            <TableCell />
+            <TableCell align="right" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{num(totalSum)}</TableCell>
+            <TableCell />
+          </TableRow>
+        </TableFooter>
+      </Table>
+    </TableContainer>
+  );
+}

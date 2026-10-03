@@ -51,7 +51,7 @@ export function Topbar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
       <Tooltip title={t('toggle_sb')}>
         <IconButton aria-label={t('toggle_sb')} onClick={isMobile ? onMenu : () => update(d => { d.collapsed = !d.collapsed; })}><PanelLeft size={19} /></IconButton>
       </Tooltip>
-      <Breadcrumbs aria-label="Навигационная цепочка" separator={<ChevronRight size={14} />} sx={{ minWidth: 0, '& ol': { flexWrap: 'nowrap' }, '& li': { whiteSpace: 'nowrap' } }}>
+      <Breadcrumbs aria-label="Навигационная цепочка" separator={<ChevronRight size={14} />} sx={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden', '& ol': { flexWrap: 'nowrap' }, '& li': { whiteSpace: 'nowrap' }, '& li:last-of-type': { minWidth: 0, overflow: 'hidden' }, '& .MuiBreadcrumbs-li:not(:last-of-type), & .MuiBreadcrumbs-separator': { display: crumbs.length ? { xs: 'none', lg: 'flex' } : 'flex' } }}>
         {crumbs.length ? (
           <Link component={RouterLink} to={home} underline="none" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }} aria-label={t('nav_dashboard')}><Home size={16} />{!isMobile && t('nav_dashboard')}</Link>
         ) : (
@@ -62,9 +62,9 @@ export function Topbar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
           : <Link key={c.label} component={RouterLink} to={c.to} underline="none" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{c.label}</Link>))}
       </Breadcrumbs>
 
-      <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
         <Button data-tour="search" onClick={onSearch} color="inherit" aria-label="Поиск (⌘K)"
-          sx={{ display: { xs: 'none', sm: 'flex' }, justifyContent: 'flex-start', width: { sm: 200, lg: 260 }, minHeight: 36, height: 36, border: 1, borderColor: 'divider', bgcolor: 'action.hover', color: 'text.secondary', gap: 1, px: 1.25 }}>
+          sx={{ display: { xs: 'none', sm: 'flex' }, justifyContent: 'flex-start', width: { sm: 180, lg: 260 }, minHeight: 36, height: 36, border: 1, borderColor: 'divider', bgcolor: 'action.hover', color: 'text.secondary', gap: 1, px: 1.25 }}>
           <Search size={16} /><Box component="span" sx={{ flex: 1, textAlign: 'left', fontWeight: 400 }}>{t('search')}</Box>
           <Box component="kbd" sx={{ fontSize: 11, border: 1, borderColor: 'divider', borderRadius: 1, px: 0.5, bgcolor: 'background.paper', fontFamily: 'inherit' }}>⌘K</Box>
         </Button>

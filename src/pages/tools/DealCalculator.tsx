@@ -1,12 +1,13 @@
-import { Alert, Box, Button, Card, Chip, Grid, IconButton, InputAdornment, LinearProgress, MenuItem, Paper, Stack, Step, StepButton, Stepper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
-import { ArrowLeft, Bot, Calculator, FileSpreadsheet, FolderDown, Plus, Send, Trash2, TriangleAlert } from 'lucide-react';
+import { Alert, Box, Button, Card, Chip, Grid, InputAdornment, LinearProgress, MenuItem, Paper, Stack, Step, StepButton, Stepper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { ArrowLeft, Bot, Calculator, FileSpreadsheet, FolderDown, Plus, Send, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { nowIso, uid, useStore } from '@/app/store';
 import { Dropzone } from '@/components/common/Dropzone';
 import { Term } from '@/components/common/Term';
 import { downloadText, num } from '@/lib/format';
-import { RATES, SAMPLE_POSITIONS, calculate, emptyCosts, hsInfo, type CalcState, type Costs, type Position } from '@/pages/tools/calcModel';
+import { PositionsEditor } from '@/pages/tools/PositionsEditor';
+import { RATES, SAMPLE_POSITIONS, calculate, emptyCosts, type CalcState, type Costs, type Position } from '@/pages/tools/calcModel';
 
 const KEY = 'incustoms-calc';
 export const CALC_IMPORT_KEY = 'incustoms-calc-import';
@@ -113,9 +114,7 @@ export function DealCalculator() {
       </Stepper>
 
       {s.step === 0 ? (
-        <Grid container spacing={2}>
-          <Grid item xs={12} lg={8.5}>
-            <Stack spacing={2}>
+        <Stack spacing={2}>
               <Card sx={{ p: { xs: 2, md: 3 } }}>
                 <Typography variant="h3" sx={{ mb: 2 }}>1. Документ сделки</Typography>
                 <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -151,32 +150,7 @@ export function DealCalculator() {
                 {s.positions.length === 0 ? (
                   <Typography color="text.secondary">Загрузите документ или добавьте позицию вручную.</Typography>
                 ) : (
-                  <TableContainer>
-                    <Table size="small" sx={{ minWidth: 720, '& td': { px: 0.75 }, '& th': { px: 0.75 } }}>
-                      <TableHead>
-                        <TableRow><TableCell>Товар</TableCell><TableCell><Term tip="Код товара по ТН ВЭД определяет ставку пошлины">ТН ВЭД</Term></TableCell><TableCell>Кол-во</TableCell><TableCell>Цена, {cur}</TableCell><TableCell>Вес ед., кг</TableCell><TableCell align="right">Сумма</TableCell><TableCell /></TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {s.positions.map(p => {
-                          const info = hsInfo(p.hs);
-                          return (
-                            <TableRow key={p.id}>
-                              <TableCell sx={{ minWidth: 180 }}><TextField variant="standard" placeholder="Наименование" value={p.name} onChange={e => setPos(p.id, { name: e.target.value })} inputProps={{ 'aria-label': 'Наименование' }} /></TableCell>
-                              <TableCell sx={{ minWidth: 150 }}>
-                                <TextField variant="standard" placeholder="0000 00 000 0" value={p.hs} onChange={e => setPos(p.id, { hs: e.target.value })} inputProps={{ 'aria-label': 'Код ТН ВЭД' }}
-                                  helperText={p.hs ? (info ? info.label : 'Код не найден в демо-базе') : ' '} FormHelperTextProps={{ sx: { color: p.hs && !info ? 'warning.main' : undefined, whiteSpace: 'nowrap' } }} />
-                              </TableCell>
-                              <TableCell sx={{ width: 90 }}><TextField variant="standard" type="number" value={p.qty} onChange={e => setPos(p.id, { qty: Math.max(0, +e.target.value) })} inputProps={{ 'aria-label': 'Количество', min: 0 }} /></TableCell>
-                              <TableCell sx={{ width: 110 }}><TextField variant="standard" type="number" value={p.unitPrice} onChange={e => setPos(p.id, { unitPrice: Math.max(0, +e.target.value) })} inputProps={{ 'aria-label': 'Цена', min: 0 }} /></TableCell>
-                              <TableCell sx={{ width: 100 }}><TextField variant="standard" type="number" value={p.weight} onChange={e => setPos(p.id, { weight: Math.max(0, +e.target.value) })} inputProps={{ 'aria-label': 'Вес', min: 0, step: 0.1 }} /></TableCell>
-                              <TableCell align="right" sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{num(p.qty * p.unitPrice)}</TableCell>
-                              <TableCell sx={{ width: 40 }}><IconButton size="small" aria-label={`Удалить позицию ${p.name}`} onClick={() => removePos(p.id)}><Trash2 size={16} /></IconButton></TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                  <PositionsEditor positions={s.positions} currency={cur} onChange={setPos} onRemove={removePos} />
                 )}
               </Card>
 
@@ -202,34 +176,39 @@ export function DealCalculator() {
                   </Grid>
                 </Grid>
               </Card>
-            </Stack>
-          </Grid>
 
-          <Grid item xs={12} lg={3.5}>
-            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, position: { lg: 'sticky' }, top: { lg: 88 } }}>
-              <Typography variant="h3" sx={{ mb: 1.5 }}>Предварительный итог</Typography>
-              {[
-                ['Позиции', `${valid.length}`],
-                ['Стоимость товаров', money2(res.goods)],
-                ['Расходы', money2(res.logistics)],
-                ['Таможенные платежи', money2(res.payments)],
-              ].map(([k, v]) => (
-                <Stack key={k} direction="row" justifyContent="space-between" sx={{ py: 0.75, borderBottom: '1px dashed', borderColor: 'divider' }}>
-                  <Typography variant="body2" color="text.secondary">{k}</Typography><Typography variant="body2" fontWeight={600}>{v}</Typography>
-                </Stack>
-              ))}
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>Себестоимость</Typography>
-              <Typography sx={{ fontSize: 24, fontWeight: 700 }}>{money2(res.landed)}</Typography>
-              <Typography variant="caption" color="text.secondary">≈ {uzs(res.landed)}</Typography>
-              <Tooltip title={valid.length ? '' : 'Добавьте хотя бы одну позицию с количеством и ценой'}>
-                <span>
-                  <Button fullWidth variant="contained" size="large" startIcon={<Calculator size={18} />} sx={{ mt: 2 }} disabled={!valid.length} onClick={() => { set({ step: 1 }); window.scrollTo(0, 0); }}>Рассчитать сделку</Button>
-                </span>
-              </Tooltip>
-              {!valid.length && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Чтобы продолжить, добавьте позицию с количеством и ценой.</Typography>}
-            </Paper>
-          </Grid>
-        </Grid>
+              <Paper
+                elevation={0}
+                aria-label="Предварительный итог"
+                sx={{
+                  position: { sm: 'sticky' }, bottom: { sm: 16 }, width: { sm: 'calc(100% - 56px)' }, boxSizing: 'border-box', zIndex: 5, p: { xs: 2, md: 2.5 }, borderRadius: 3, border: 1, borderColor: 'divider',
+                  boxShadow: '0 -6px 24px rgba(15,23,42,.08)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: { xs: 1.5, md: 3 },
+                }}
+              >
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', columnGap: { xs: 2, md: 3 }, rowGap: 1, flex: '1 1 520px', minWidth: 0 }}>
+                  {[
+                    ['Позиции', `${valid.length}`],
+                    ['Товары', money2(res.goods)],
+                    ['Расходы', money2(res.logistics)],
+                    ['Пошлины и НДС', money2(res.payments)],
+                  ].map(([k, v]) => (
+                    <Box key={k}>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>{k}</Typography>
+                      <Typography fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{v}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Box sx={{ flex: '1 0 auto', textAlign: 'right' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Себестоимость ≈ {uzs(res.landed)}</Typography>
+                  <Typography sx={{ fontSize: 22, fontWeight: 700, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{money2(res.landed)}</Typography>
+                </Box>
+                <Tooltip title={valid.length ? '' : 'Добавьте хотя бы одну позицию с количеством и ценой'}>
+                  <Box component="span" sx={{ flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
+                    <Button fullWidth variant="contained" size="large" startIcon={<Calculator size={18} />} disabled={!valid.length} onClick={() => { set({ step: 1 }); window.scrollTo(0, 0); }}>Рассчитать сделку</Button>
+                  </Box>
+                </Tooltip>
+              </Paper>
+        </Stack>
       ) : (
         <Stack spacing={2}>
           {unknownHs > 0 && (

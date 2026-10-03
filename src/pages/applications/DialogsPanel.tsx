@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, InputBase, List, ListItemButton, MenuItem, Select, Stack, Switch, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Badge, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, InputBase, List, ListItemButton, Stack, Switch, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Archive, ArchiveRestore, ArrowLeft, CheckCheck, Inbox, Mail, MessageSquare, Paperclip, Search, Send, Settings } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { nowIso, uid, useStore } from '@/app/store';
@@ -17,7 +17,6 @@ export function DialogsPanel({ selected, onSelect }: { selected: string | null; 
   const { state, update, toast } = useStore();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [channel, setChannel] = useState<'all' | Channel>('all');
   const [archived, setArchived] = useState(false);
   const [q, setQ] = useState('');
   const [text, setText] = useState('');
@@ -25,9 +24,9 @@ export function DialogsPanel({ selected, onSelect }: { selected: string | null; 
   const listRef = useRef<HTMLDivElement>(null);
 
   const list = useMemo(() => state.dialogs
-    .filter(d => d.archived === archived && (channel === 'all' || d.channel === channel))
+    .filter(d => d.archived === archived)
     .filter(d => !q.trim() || `${d.title} ${d.contact} ${d.messages.map(m => m.text).join(' ')}`.toLowerCase().includes(q.toLowerCase())),
-  [state.dialogs, archived, channel, q]);
+  [state.dialogs, archived, q]);
   const current = state.dialogs.find(d => d.id === selected) ?? null;
 
   useEffect(() => {
@@ -63,10 +62,6 @@ export function DialogsPanel({ selected, onSelect }: { selected: string | null; 
                 <Tooltip title="Настройки подключений"><IconButton size="small" aria-label="Настройки подключений" onClick={() => setSettings(true)}><Settings size={17} /></IconButton></Tooltip>
               </Stack>
             </Stack>
-            <Select fullWidth value={channel} onChange={e => setChannel(e.target.value as typeof channel)} inputProps={{ 'aria-label': 'Канал' }} sx={{ mb: 1 }}>
-              <MenuItem value="all">Все каналы</MenuItem>
-              {(Object.keys(CH) as Channel[]).map(c => <MenuItem key={c} value={c}>{CH[c].label}</MenuItem>)}
-            </Select>
             <ToggleButtonGroup exclusive fullWidth size="small" value={archived ? 'arch' : 'act'} onChange={(_, v) => v && setArchived(v === 'arch')} sx={{ mb: 1, '& .MuiToggleButton-root': { textTransform: 'none', py: 0.5 } }}>
               <ToggleButton value="act">Активные</ToggleButton>
               <ToggleButton value="arch">Архив</ToggleButton>
