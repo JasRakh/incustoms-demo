@@ -155,6 +155,7 @@ export interface State {
   onboarded: boolean;
   collapsed: boolean;
   menuOrder: string[];
+  declMenuOrder: string[];
   profile: Profile;
   nextAppId: number;
   applications: Application[];

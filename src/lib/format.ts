@@ -1,11 +1,29 @@
-export const money = (n: number, cur = 'сум') => `${Math.round(n).toLocaleString('ru-RU').replace(/[  ,]/g, ' ')} ${cur}`;
-export const num = (n: number, digits = 2) => n.toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits }).replace(/[  ]/g, ' ');
-export const fmtDate = (d: string) => new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+export const money = (n: number, cur = 'сум') =>
+  `${Math.round(n).toLocaleString('ru-RU').replace(/[  ,]/g, ' ')} ${cur}`;
+export const num = (n: number, digits = 2) =>
+  n
+    .toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    .replace(/[  ]/g, ' ');
+export const fmtDate = (d: string) =>
+  new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 export const fmtShort = (d: string) => new Date(d).toLocaleDateString('ru-RU');
-export const fmtTime = (d: string) => new Date(d).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+export const fmtTime = (d: string) =>
+  new Date(d).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 export const fmtDateTime = (d: string) => `${fmtDate(d)} в ${fmtTime(d)}`;
-export const fmtSize = (b: number) => (b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`);
-export const initials = (n: string) => n.trim().split(/\s+/).slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || 'U';
+export const fmtSize = (b: number) =>
+  b < 1024
+    ? `${b} B`
+    : b < 1048576
+      ? `${(b / 1024).toFixed(1)} KB`
+      : `${(b / 1048576).toFixed(1)} MB`;
+export const initials = (n: string) =>
+  n
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0] ?? '')
+    .join('')
+    .toUpperCase() || 'U';
 export const today = () => new Date().toISOString().slice(0, 10);
 
 export function relative(d: string) {

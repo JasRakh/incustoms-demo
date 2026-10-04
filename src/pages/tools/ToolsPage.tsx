@@ -9,13 +9,13 @@ type Tool = 'calculator' | 'ocr';
 export function ToolsPage() {
   const { tool } = useParams();
   const nav = useNavigate();
-  if (tool !== 'calculator' && tool !== 'ocr') return <Navigate to="/tools/calculator" replace />;
+  if (tool !== 'calculator' && tool !== 'ocr') return <Navigate to='/tools/calculator' replace />;
   return (
     <>
       <SegTabs<Tool>
-        ariaLabel="Инструменты"
+        ariaLabel='Инструменты'
         value={tool}
-        onChange={v => nav(`/tools/${v}`)}
+        onChange={(v) => nav(`/tools/${v}`)}
         items={[
           { value: 'calculator', label: 'Калькулятор сделки', icon: <Calculator size={16} /> },
           { value: 'ocr', label: 'OCR → Excel', icon: <ScanText size={16} /> },

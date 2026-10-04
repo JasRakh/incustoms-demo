@@ -1,6 +1,15 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { State } from '@/types';
-import { initialState, MENU_DEFAULT } from '@/data/mock';
+import { DECL_MENU_DEFAULT, initialState, MENU_DEFAULT } from '@/data/mock';
 
 const KEY = 'incustoms-demo-state-v1';
 
@@ -9,11 +18,22 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const s = { ...initialState(), ...JSON.parse(raw) } as State;
-      if (!Array.isArray(s.menuOrder) || s.menuOrder.length !== MENU_DEFAULT.length || !s.menuOrder.every(k => MENU_DEFAULT.includes(k))) {
+      if (
+        !Array.isArray(s.menuOrder) ||
+        s.menuOrder.length !== MENU_DEFAULT.length ||
+        !s.menuOrder.every((k) => MENU_DEFAULT.includes(k))
+      ) {
         s.menuOrder = [...MENU_DEFAULT];
       }
-      s.aziza = s.aziza.filter(m => !m.typing);
-      s.tasks = s.tasks.map(x => (x.status === 'aziza' ? { ...x, status: 'todo' } : x));
+      if (
+        !Array.isArray(s.declMenuOrder) ||
+        s.declMenuOrder.length !== DECL_MENU_DEFAULT.length ||
+        !s.declMenuOrder.every((k) => DECL_MENU_DEFAULT.includes(k))
+      ) {
+        s.declMenuOrder = [...DECL_MENU_DEFAULT];
+      }
+      s.aziza = s.aziza.filter((m) => !m.typing);
+      s.tasks = s.tasks.map((x) => (x.status === 'aziza' ? { ...x, status: 'todo' } : x));
       return s;
     }
   } catch {
@@ -62,26 +82,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   const update = useCallback((fn: (draft: State) => void) => {
-    setState(prev => {
+    setState((prev) => {
       const draft = structuredClone(prev);
       fn(draft);
       return draft;
     });
   }, []);
 
-  const dismissToast = useCallback((id: string) => setToasts(t => t.filter(x => x.id !== id)), []);
+  const dismissToast = useCallback(
+    (id: string) => setToasts((t) => t.filter((x) => x.id !== id)),
+    []
+  );
 
   const toast = useCallback<StoreValue['toast']>((text, opts) => {
     const id = uid();
-    setToasts(t => [...t, { id, text, severity: opts?.severity ?? 'success', undo: opts?.undo }]);
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), opts?.undo ? 6000 : 3200);
+    setToasts((t) => [...t, { id, text, severity: opts?.severity ?? 'success', undo: opts?.undo }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts?.undo ? 6000 : 3200);
   }, []);
 
-  const notify = useCallback((text: string, to: string) => {
-    update(d => {
-      d.notifications.unshift({ id: uid(), text, at: nowIso(), read: false, to });
-    });
-  }, [update]);
+  const notify = useCallback(
+    (text: string, to: string) => {
+      update((d) => {
+        d.notifications.unshift({ id: uid(), text, at: nowIso(), read: false, to });
+      });
+    },
+    [update]
+  );
 
   const reset = useCallback(() => {
     try {
@@ -94,7 +120,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ state, update, reset, toast, notify, toasts, dismissToast }),
-    [state, update, reset, toast, notify, toasts, dismissToast],
+    [state, update, reset, toast, notify, toasts, dismissToast]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

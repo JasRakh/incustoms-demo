@@ -30,7 +30,12 @@ export interface CalcState {
   step: 0 | 1;
 }
 
-export const RATES: Record<CalcState['currency'], number> = { USD: 12800, EUR: 13900, CNY: 1780, RUB: 150 };
+export const RATES: Record<CalcState['currency'], number> = {
+  USD: 12800,
+  EUR: 13900,
+  CNY: 1780,
+  RUB: 150,
+};
 
 const HS_RATES: Record<string, { duty: number; excise: number; label: string }> = {
   '8517': { duty: 0, excise: 0, label: 'Телефоны и смартфоны' },
@@ -49,7 +54,19 @@ export function hsInfo(hs: string) {
   return HS_RATES[key] ?? null;
 }
 
-export const emptyCosts: Costs = { freight: 0, insurance: 0, broker: 0, storage: 0, certification: 0, delivery: 0, other: 0, bankPct: 0, financePct: 0, base: 'value', origin: 'none' };
+export const emptyCosts: Costs = {
+  freight: 0,
+  insurance: 0,
+  broker: 0,
+  storage: 0,
+  certification: 0,
+  delivery: 0,
+  other: 0,
+  bankPct: 0,
+  financePct: 0,
+  base: 'value',
+  origin: 'none',
+};
 
 export const SAMPLE_POSITIONS: Omit<Position, 'id'>[] = [
   { name: 'Смартфон, 128 ГБ', hs: '8517 13 000 0', qty: 20, unitPrice: 180, weight: 0.4 },
@@ -84,14 +101,15 @@ export interface CalcResult {
 }
 
 export function calculate(s: CalcState): CalcResult {
-  const pos = s.positions.filter(p => p.qty > 0 && p.unitPrice > 0);
+  const pos = s.positions.filter((p) => p.qty > 0 && p.unitPrice > 0);
   const goodsOf = (p: Position) => p.qty * p.unitPrice;
-  const baseOf = (p: Position) => (s.costs.base === 'value' ? goodsOf(p) : s.costs.base === 'weight' ? p.weight * p.qty : p.qty);
+  const baseOf = (p: Position) =>
+    s.costs.base === 'value' ? goodsOf(p) : s.costs.base === 'weight' ? p.weight * p.qty : p.qty;
   const totalBase = pos.reduce((a, p) => a + baseOf(p), 0) || 1;
   const c = s.costs;
   const border = c.freight + c.insurance;
   const inner = c.broker + c.storage + c.certification + c.delivery + c.other;
-  const lines = pos.map<LineResult>(p => {
+  const lines = pos.map<LineResult>((p) => {
     const share = baseOf(p) / totalBase;
     const goods = goodsOf(p);
     const info = hsInfo(p.hs);
@@ -100,21 +118,42 @@ export function calculate(s: CalcState): CalcResult {
     if (c.origin === 'forma') dutyRate = dutyRate * 0.75;
     const exciseRate = info?.excise ?? 0;
     const customsValue = goods + border * share;
-    const duty = customsValue * dutyRate / 100;
-    const excise = customsValue * exciseRate / 100;
+    const duty = (customsValue * dutyRate) / 100;
+    const excise = (customsValue * exciseRate) / 100;
     const vat = (customsValue + duty + excise) * 0.12;
     const fee = customsValue * 0.002;
-    const extra = inner * share + goods * (c.bankPct + c.financePct) / 100;
+    const extra = inner * share + (goods * (c.bankPct + c.financePct)) / 100;
     const landed = customsValue + duty + excise + vat + fee + extra;
-    return { p, goods, customsValue, dutyRate, exciseRate, duty, excise, vat, fee, logistics: border * share, extra, landed, unitCost: landed / p.qty, hsKnown: !!info };
+    return {
+      p,
+      goods,
+      customsValue,
+      dutyRate,
+      exciseRate,
+      duty,
+      excise,
+      vat,
+      fee,
+      logistics: border * share,
+      extra,
+      landed,
+      unitCost: landed / p.qty,
+      hsKnown: !!info,
+    };
   });
   const sum = (f: (l: LineResult) => number) => lines.reduce((a, l) => a + f(l), 0);
   return {
     lines,
-    goods: sum(l => l.goods),
-    logistics: sum(l => l.logistics) + sum(l => l.extra),
-    payments: sum(l => l.duty + l.excise + l.vat + l.fee),
-    landed: sum(l => l.landed),
-    totals: { duty: sum(l => l.duty), excise: sum(l => l.excise), vat: sum(l => l.vat), fee: sum(l => l.fee), extra: sum(l => l.extra) },
+    goods: sum((l) => l.goods),
+    logistics: sum((l) => l.logistics) + sum((l) => l.extra),
+    payments: sum((l) => l.duty + l.excise + l.vat + l.fee),
+    landed: sum((l) => l.landed),
+    totals: {
+      duty: sum((l) => l.duty),
+      excise: sum((l) => l.excise),
+      vat: sum((l) => l.vat),
+      fee: sum((l) => l.fee),
+      extra: sum((l) => l.extra),
+    },
   };
 }

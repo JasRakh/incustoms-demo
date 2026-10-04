@@ -27,19 +27,19 @@ export function App() {
         {state.role === 'user' ? (
           <>
             <Route index element={<DashboardPage />} />
-            <Route path="applications" element={<ApplicationsPage />} />
-            <Route path="tools" element={<Navigate to="/tools/calculator" replace />} />
-            <Route path="tools/:tool" element={<ToolsPage />} />
-            <Route path="aziza" element={<AzizaPage />} />
-            <Route path="finance" element={<FinancePage />} />
-            <Route path="documents" element={<DocumentsPage />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path='applications' element={<ApplicationsPage />} />
+            <Route path='tools' element={<Navigate to='/tools/calculator' replace />} />
+            <Route path='tools/:tool' element={<ToolsPage />} />
+            <Route path='aziza' element={<AzizaPage />} />
+            <Route path='finance' element={<FinancePage />} />
+            <Route path='documents' element={<DocumentsPage />} />
+            <Route path='help' element={<HelpPage />} />
+            <Route path='*' element={<Navigate to='/' replace />} />
           </>
         ) : (
           <>
-            <Route path="declarant/*" element={<DeclarantPage />} />
-            <Route path="*" element={<Navigate to="/declarant" replace />} />
+            <Route path='declarant/*' element={<DeclarantPage />} />
+            <Route path='*' element={<Navigate to='/declarant' replace />} />
           </>
         )}
       </Route>

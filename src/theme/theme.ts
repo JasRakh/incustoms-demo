@@ -7,8 +7,6 @@ export const brand = {
   teal: '#0d9488',
   orange: '#d97706',
   red: '#dc2626',
-  logoRed: '#e5322d',
-  logoBlue: '#2563eb',
 };
 
 export function makeTheme(mode: 'light' | 'dark') {
@@ -21,9 +19,13 @@ export function makeTheme(mode: 'light' | 'dark') {
       success: { main: brand.green },
       error: { main: light ? brand.red : '#f87171' },
       warning: { main: brand.orange },
-      background: light ? { default: '#ffffff', paper: '#ffffff' } : { default: '#0b1120', paper: '#111827' },
+      background: light
+        ? { default: '#ffffff', paper: '#ffffff' }
+        : { default: '#0b1120', paper: '#111827' },
       divider: light ? '#e5e7eb' : '#253041',
-      text: light ? { primary: '#0f172a', secondary: '#5f6673' } : { primary: '#e5e7eb', secondary: '#a1adbf' },
+      text: light
+        ? { primary: '#0f172a', secondary: '#5f6673' }
+        : { primary: '#e5e7eb', secondary: '#a1adbf' },
       action: { hover: light ? '#f3f4f6' : '#1f2937' },
     },
     shape: { borderRadius: 10 },
@@ -42,24 +44,45 @@ export function makeTheme(mode: 'light' | 'dark') {
         styleOverrides: {
           body: { WebkitFontSmoothing: 'antialiased' },
           '*:focus-visible': { outline: `2px solid ${brand.primary}`, outlineOffset: 2 },
-          '@media (prefers-reduced-motion: reduce)': { '*': { animation: 'none !important', transition: 'none !important' } },
+          '@media (prefers-reduced-motion: reduce)': {
+            '*': { animation: 'none !important', transition: 'none !important' },
+          },
         },
       },
       MuiButton: {
         defaultProps: { disableElevation: true },
-        styleOverrides: { root: { borderRadius: 8, minHeight: 40, whiteSpace: 'nowrap' }, sizeSmall: { minHeight: 32 } },
+        styleOverrides: {
+          root: { borderRadius: 8, minHeight: 40, whiteSpace: 'nowrap' },
+          sizeSmall: { minHeight: 32 },
+        },
       },
       MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
-      MuiCard: { defaultProps: { variant: 'outlined' }, styleOverrides: { root: { borderRadius: 12 } } },
+      MuiCard: {
+        defaultProps: { variant: 'outlined' },
+        styleOverrides: { root: { borderRadius: 12 } },
+      },
       MuiTextField: { defaultProps: { size: 'small', fullWidth: true } },
       MuiSelect: { defaultProps: { size: 'small' } },
       MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
       MuiTooltip: { defaultProps: { arrow: true } },
       MuiDialog: { styleOverrides: { paper: { borderRadius: 14 } } },
-      MuiTableCell: { styleOverrides: { head: { fontWeight: 500, color: light ? '#5f6673' : '#a1adbf', fontSize: 12, whiteSpace: 'nowrap' } } },
+      MuiTableCell: {
+        styleOverrides: {
+          head: {
+            fontWeight: 500,
+            color: light ? '#5f6673' : '#a1adbf',
+            fontSize: 12,
+            whiteSpace: 'nowrap',
+          },
+        },
+      },
       MuiListItemButton: { styleOverrides: { root: { borderRadius: 8 } } },
       MuiAlert: { styleOverrides: { root: { borderRadius: 10 } } },
-      MuiLinearProgress: { styleOverrides: { root: { borderRadius: 4, height: 8, backgroundColor: alpha(brand.primary, 0.12) } } },
+      MuiLinearProgress: {
+        styleOverrides: {
+          root: { borderRadius: 4, height: 8, backgroundColor: alpha(brand.primary, 0.12) },
+        },
+      },
     },
   });
 }
