@@ -47,3 +47,6 @@ export function downloadText(name: string, content: string, type = 'text/plain;c
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+export const fmtCompact = (d: string) =>
+  `${new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}, ${fmtTime(d)}`;

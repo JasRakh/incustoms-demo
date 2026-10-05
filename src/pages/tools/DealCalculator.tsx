@@ -32,13 +32,21 @@ import {
   Plus,
   Send,
   TriangleAlert,
+  Eraser,
+  FileUp,
+  Percent,
+  Truck,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { nowIso, uid, useStore } from '@/app/store';
 import { Dropzone } from '@/components/common/Dropzone';
+import { NumberInput } from '@/components/common/NumberInput';
 import { Term } from '@/components/common/Term';
 import { downloadText, num } from '@/lib/format';
+import { SegTabs } from '@/components/common/SegTabs';
+import { DeliveryStep, clearDelivery, type DeliveryApply } from '@/pages/tools/DeliveryStep';
+import { DutiesStep } from '@/pages/tools/DutiesStep';
 import { PositionsEditor } from '@/pages/tools/PositionsEditor';
 import {
   RATES,
@@ -105,7 +113,9 @@ const COST_FIELDS: { key: keyof Costs; label: string; tip: string; pct?: boolean
   },
 ];
 
-export function DealCalculator() {
+export function DealCalculator({ variant = 'user' }: { variant?: 'user' | 'declarant' }) {
+  const declarant = variant === 'declarant';
+  const [resetKey, setResetKey] = useState(0);
   const { update, toast } = useStore();
   const nav = useNavigate();
   const [s, setS] = useState<CalcState>(loadCalc);
@@ -123,6 +133,29 @@ export function DealCalculator() {
       /* storage unavailable */
     }
   }, [s]);
+
+  const isDirty =
+    s.positions.length > 0 ||
+    !!s.fileName ||
+    s.step !== 0 ||
+    !!s.calculated ||
+    (declarant && sessionStorage.getItem('incustoms-delivery') !== null) ||
+    JSON.stringify(s.costs) !== JSON.stringify(emptyCosts);
+
+  const clearAll = () => {
+    const prev = s;
+    setS({
+      docType: s.docType,
+      currency: s.currency,
+      positions: [],
+      costs: { ...emptyCosts },
+      step: 0,
+    });
+    setExtracting(0);
+    clearDelivery();
+    setResetKey((k) => k + 1);
+    toast('Данные калькулятора очищены', { undo: () => setS(prev) });
+  };
 
   const set = (patch: Partial<CalcState>) => setS((v) => ({ ...v, ...patch }));
   const setCost = (k: keyof Costs, v: Costs[keyof Costs]) =>
@@ -231,6 +264,276 @@ export function DealCalculator() {
     });
 
   const money2 = (n: number) => `${num(n)} ${cur}`;
+  const azizaPath = declarant ? '/declarant/ai' : '/aziza';
+  const toCur = (usd: number) => (usd * RATES.USD) / RATES[cur];
+  const applyDelivery = (r: DeliveryApply) => {
+    setS((x) => ({
+      ...x,
+      step: 2,
+      costs: {
+        ...x.costs,
+        freight: Math.round(toCur(r.freightUsd) * 100) / 100,
+        insurance: Math.round(toCur(r.insuranceUsd) * 100) / 100,
+        broker: Math.round(toCur(r.customsUsd) * 100) / 100,
+      },
+    }));
+    toast('Доставка перенесена в расчёт платежей');
+    window.scrollTo(0, 0);
+  };
+  const totalWeight = s.positions.reduce((a, p) => a + p.qty * p.weight, 0);
+  const customsValue = res.goods + Number(s.costs.freight) + Number(s.costs.insurance);
+
+  const resultsView = (
+    <Stack spacing={2}>
+      {unknownHs > 0 && (
+        <Alert
+          severity='warning'
+          icon={<TriangleAlert size={20} />}
+          action={
+            <Button
+              color='inherit'
+              size='small'
+              startIcon={<Bot size={15} />}
+              onClick={() => nav(azizaPath)}
+            >
+              Спросить Азизу
+            </Button>
+          }
+        >
+          Для {unknownHs} поз. код ТН ВЭД не найден — применена ставка 10%. Уточните код, чтобы
+          расчёт был точнее.
+        </Alert>
+      )}
+      <Grid container spacing={1.5}>
+        {[
+          { l: 'Стоимость товаров', v: res.goods, c: '#2f6fed' },
+          { l: 'Логистика и расходы', v: res.logistics, c: '#0d9488' },
+          { l: 'Таможенные платежи', v: res.payments, c: '#d97706' },
+        ].map((x) => (
+          <Grid item xs={12} sm={6} lg={3} key={x.l}>
+            <Card sx={{ p: 2.25, height: '100%' }}>
+              <Stack direction='row' spacing={1} alignItems='center'>
+                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: x.c }} />
+                <Typography variant='body2' color='text.secondary'>
+                  {x.l}
+                </Typography>
+              </Stack>
+              <Typography sx={{ fontSize: 22, fontWeight: 700, mt: 1 }}>{money2(x.v)}</Typography>
+              <Typography variant='caption' color='text.secondary'>
+                ≈ {uzs(x.v)}
+              </Typography>
+            </Card>
+          </Grid>
+        ))}
+        <Grid item xs={12} sm={6} lg={3}>
+          <Card
+            sx={{
+              p: 2.25,
+              height: '100%',
+              background: 'linear-gradient(135deg,#2f6fed,#6d4af2)',
+              border: 0,
+              color: '#fff',
+            }}
+          >
+            <Typography variant='body2' sx={{ opacity: 0.85 }}>
+              Себестоимость сделки
+            </Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 700, mt: 1 }}>
+              {money2(res.landed)}
+            </Typography>
+            <Typography variant='caption' sx={{ opacity: 0.85 }}>
+              ≈ {uzs(res.landed)}
+            </Typography>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Card sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant='h3' sx={{ mb: 1.5 }}>
+          Структура себестоимости
+        </Typography>
+        <Box
+          role='img'
+          aria-label='Структура себестоимости'
+          sx={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', mb: 1.5 }}
+        >
+          {[
+            [res.goods, '#2f6fed'],
+            [res.logistics, '#0d9488'],
+            [res.payments, '#d97706'],
+          ].map(([v, c], i) => (
+            <Box
+              key={i}
+              sx={{ width: `${(Number(v) / (res.landed || 1)) * 100}%`, bgcolor: String(c) }}
+            />
+          ))}
+        </Box>
+        <Stack direction='row' spacing={3} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+          {[
+            ['Пошлина', res.totals.duty],
+            ['Акциз', res.totals.excise],
+            ['НДС 12%', res.totals.vat],
+            ['Таможенный сбор', res.totals.fee],
+          ].map(([k, v]) => (
+            <Typography key={String(k)} variant='body2'>
+              <Box component='span' sx={{ color: 'text.secondary' }}>
+                {k}:
+              </Box>{' '}
+              <b>{money2(Number(v))}</b>
+            </Typography>
+          ))}
+        </Stack>
+      </Card>
+
+      <Card sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant='h3' sx={{ mb: 1.5 }}>
+          Пошлины и налоги по позициям
+        </Typography>
+        <TableContainer>
+          <Table size='small' sx={{ minWidth: 820 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Товар</TableCell>
+                <TableCell>ТН ВЭД</TableCell>
+                <TableCell align='right'>
+                  <Term tip='Стоимость товара + фрахт и страхование до границы'>
+                    Там. стоимость
+                  </Term>
+                </TableCell>
+                <TableCell align='right'>Пошлина</TableCell>
+                <TableCell align='right'>Акциз</TableCell>
+                <TableCell align='right'>НДС</TableCell>
+                <TableCell align='right'>Себестоимость</TableCell>
+                <TableCell align='right'>За ед.</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {res.lines.map((l) => (
+                <TableRow key={l.p.id} hover>
+                  <TableCell>
+                    {l.p.name || '—'}
+                    <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                      {l.p.qty} шт.
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {l.p.hs || '—'}{' '}
+                    {!l.hsKnown && (
+                      <Tooltip title='Код не найден — применена ставка 10%'>
+                        <Chip
+                          size='small'
+                          color='warning'
+                          label='проверьте'
+                          sx={{ height: 18, ml: 0.5 }}
+                        />
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                  <TableCell align='right'>{num(l.customsValue)}</TableCell>
+                  <TableCell align='right'>
+                    {num(l.duty)}
+                    <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                      {num(l.dutyRate, 1)}%
+                    </Typography>
+                  </TableCell>
+                  <TableCell align='right'>{num(l.excise)}</TableCell>
+                  <TableCell align='right'>{num(l.vat)}</TableCell>
+                  <TableCell align='right' sx={{ fontWeight: 600 }}>
+                    {num(l.landed)}
+                  </TableCell>
+                  <TableCell align='right' sx={{ fontWeight: 600, color: 'primary.main' }}>
+                    {num(l.unitCost)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1.5 }}>
+          Суммы в {cur}. Расчёт ознакомительный и выполнен по демо-ставкам; окончательные платежи
+          определяет таможенный орган.
+        </Typography>
+      </Card>
+
+      <Card sx={{ p: { xs: 2, md: 3 } }} component='section' aria-labelledby='dealTotalTitle'>
+        <Typography id='dealTotalTitle' variant='h3' sx={{ mb: 2 }}>
+          Итог по сделке
+        </Typography>
+        {unknownHs > 0 && (
+          <Box
+            sx={{
+              mb: 1.5,
+              p: 1.5,
+              borderRadius: 2,
+              border: 1,
+              borderColor: 'divider',
+              fontSize: 14,
+            }}
+          >
+            • {unknownHs} поз. без корректного кода ТН ВЭД — применена базовая ставка пошлины 10%.
+          </Box>
+        )}
+        {(
+          [
+            ['Фактурная стоимость', res.goods],
+            ['Таможенная стоимость', res.lines.reduce((a, l) => a + l.customsValue, 0)],
+            ['Пошлина', res.totals.duty],
+            ['Акциз', res.totals.excise],
+            ['НДС', res.totals.vat],
+            ['Утильсбор', 0],
+            ['Таможенный сбор', res.totals.fee],
+            ['Все таможенные платежи', res.payments],
+            ['Расходы по сделке (логистика, брокер, банк)', res.landed - res.goods - res.payments],
+            ['Полная себестоимость', res.landed],
+          ] as const
+        ).map(([k, v]) => (
+          <Stack
+            key={k}
+            direction='row'
+            justifyContent='space-between'
+            sx={{ py: 1.1, borderBottom: '1px solid', borderColor: 'divider' }}
+          >
+            <Typography color='text.secondary'>{k}</Typography>
+            <Typography
+              fontWeight={k === 'Полная себестоимость' ? 700 : 500}
+              sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+            >
+              {num(v * RATES[cur], 0)} сум
+            </Typography>
+          </Stack>
+        ))}
+        <Stack direction='row' justifyContent='space-between' sx={{ pt: 1.5 }}>
+          <Typography color='text.secondary'>Наценка к фактурной стоимости</Typography>
+          <Typography fontWeight={600}>
+            {res.goods > 0 ? num(((res.landed - res.goods) / res.goods) * 100, 1) : '0,0'}%
+          </Typography>
+        </Stack>
+      </Card>
+
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap' }}>
+        <Button
+          variant='outlined'
+          color='inherit'
+          startIcon={<ArrowLeft size={16} />}
+          onClick={() => set({ step: 0, calculated: false })}
+        >
+          Изменить данные
+        </Button>
+        <Box sx={{ flex: 1 }} />
+        <Button variant='outlined' startIcon={<FileSpreadsheet size={16} />} onClick={exportCsv}>
+          Экспорт в Excel
+        </Button>
+        <Button variant='outlined' startIcon={<FolderDown size={16} />} onClick={saveToDocs}>
+          Сохранить в документы
+        </Button>
+        {!declarant && (
+          <Button variant='contained' startIcon={<Send size={16} />} onClick={toApplication}>
+            Оформить заявку
+          </Button>
+        )}
+      </Stack>
+    </Stack>
+  );
 
   return (
     <>
@@ -250,28 +553,68 @@ export function DealCalculator() {
         >
           <Calculator size={24} />
         </Box>
-        <Box>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant='h1' sx={{ fontSize: { xs: 22, md: 26 } }}>
             Калькулятор внешнеторговой сделки
           </Typography>
           <Typography color='text.secondary'>
-            Сначала оцените себестоимость, затем рассчитайте таможенные платежи по кодам ТН ВЭД
+            {declarant
+              ? 'Один сценарий: сначала оцените доставку, затем рассчитайте таможенные платежи по коду ТН ВЭД.'
+              : 'Сначала оцените себестоимость, затем рассчитайте таможенные платежи по кодам ТН ВЭД'}
           </Typography>
         </Box>
+        <Button
+          variant='outlined'
+          color='inherit'
+          startIcon={<Eraser size={16} />}
+          disabled={!isDirty}
+          onClick={clearAll}
+          sx={{ flexShrink: 0 }}
+        >
+          Очистить
+        </Button>
       </Stack>
 
-      <Stepper nonLinear activeStep={s.step} sx={{ mb: 3, maxWidth: 560 }}>
-        <Step completed={s.step > 0}>
-          <StepButton onClick={() => set({ step: 0 })}>Документ и себестоимость</StepButton>
-        </Step>
-        <Step>
-          <StepButton disabled={!valid.length} onClick={() => set({ step: 1 })}>
-            Пошлины и налоги
-          </StepButton>
-        </Step>
-      </Stepper>
+      {declarant ? (
+        <>
+          <SegTabs<'0' | '1' | '2'>
+            ariaLabel='Шаги калькулятора'
+            value={String(s.step) as '0' | '1' | '2'}
+            onChange={(v) => set({ step: Number(v) as 0 | 1 | 2 })}
+            items={[
+              { value: '0', label: 'Шаг 0 · Документ и себестоимость', icon: <FileUp size={16} /> },
+              { value: '1', label: 'Шаг 1 · Стоимость доставки', icon: <Truck size={16} /> },
+              { value: '2', label: 'Шаг 2 · Пошлины и налоги', icon: <Percent size={16} /> },
+            ]}
+          />
+          <Typography
+            variant='caption'
+            color='text.secondary'
+            sx={{ display: 'block', mt: -2, mb: 2.5 }}
+          >
+            {
+              [
+                'Загрузите инвойс, прайс-лист или заказ — позиции извлекаются автоматически, расходы распределяются по товарам',
+                'Оценка фрахта по маршруту и виду транспорта → результат можно перенести в расчёт платежей',
+                'Пошлина, НДС, акциз и таможенный сбор по коду ТН ВЭД с учётом стоимости доставки и страховки',
+              ][s.step]
+            }
+          </Typography>
+        </>
+      ) : (
+        <Stepper nonLinear activeStep={s.step} sx={{ mb: 3, maxWidth: 560 }}>
+          <Step completed={s.step > 0}>
+            <StepButton onClick={() => set({ step: 0 })}>Документ и себестоимость</StepButton>
+          </Step>
+          <Step>
+            <StepButton disabled={!valid.length} onClick={() => set({ step: 1 })}>
+              Пошлины и налоги
+            </StepButton>
+          </Step>
+        </Stepper>
+      )}
 
-      {s.step === 0 ? (
+      {s.step === 0 && !(declarant && s.calculated) ? (
         <Stack spacing={2}>
           <Card sx={{ p: { xs: 2, md: 3 } }}>
             <Typography variant='h3' sx={{ mb: 2 }}>
@@ -381,18 +724,16 @@ export function DealCalculator() {
             <Grid container spacing={2}>
               {COST_FIELDS.map((f) => (
                 <Grid item xs={12} sm={6} md={4} key={f.key}>
-                  <TextField
-                    type='number'
+                  <NumberInput
                     label={<Term tip={f.tip}>{f.label}</Term>}
-                    value={s.costs[f.key]}
-                    onChange={(e) => setCost(f.key, Math.max(0, +e.target.value))}
+                    value={Number(s.costs[f.key])}
+                    onValueChange={(n) => setCost(f.key, n)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position='end'>{f.pct ? '%' : cur}</InputAdornment>
                       ),
                     }}
-                    inputProps={{ min: 0 }}
-                  />
+                  />{' '}
                 </Grid>
               ))}
               <Grid item xs={12} sm={6} md={4}>
@@ -506,7 +847,8 @@ export function DealCalculator() {
                   startIcon={<Calculator size={18} />}
                   disabled={!valid.length}
                   onClick={() => {
-                    set({ step: 1 });
+                    if (declarant) set({ calculated: true });
+                    else set({ step: 1 });
                     window.scrollTo(0, 0);
                   }}
                 >
@@ -516,213 +858,21 @@ export function DealCalculator() {
             </Tooltip>
           </Paper>
         </Stack>
+      ) : declarant ? (
+        s.step === 0 ? (
+          resultsView
+        ) : s.step === 1 ? (
+          <DeliveryStep
+            key={resetKey}
+            currency={cur}
+            suggest={{ weight: totalWeight, value: res.goods * (RATES[cur] / RATES.USD) }}
+            onApply={applyDelivery}
+          />
+        ) : (
+          <DutiesStep currency={cur} customsValue={customsValue} origin={s.costs.origin} />
+        )
       ) : (
-        <Stack spacing={2}>
-          {unknownHs > 0 && (
-            <Alert
-              severity='warning'
-              icon={<TriangleAlert size={20} />}
-              action={
-                <Button
-                  color='inherit'
-                  size='small'
-                  startIcon={<Bot size={15} />}
-                  onClick={() => nav('/aziza')}
-                >
-                  Спросить Азизу
-                </Button>
-              }
-            >
-              Для {unknownHs} поз. код ТН ВЭД не найден — применена ставка 10%. Уточните код, чтобы
-              расчёт был точнее.
-            </Alert>
-          )}
-          <Grid container spacing={1.5}>
-            {[
-              { l: 'Стоимость товаров', v: res.goods, c: '#2f6fed' },
-              { l: 'Логистика и расходы', v: res.logistics, c: '#0d9488' },
-              { l: 'Таможенные платежи', v: res.payments, c: '#d97706' },
-            ].map((x) => (
-              <Grid item xs={12} sm={6} lg={3} key={x.l}>
-                <Card sx={{ p: 2.25, height: '100%' }}>
-                  <Stack direction='row' spacing={1} alignItems='center'>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: x.c }} />
-                    <Typography variant='body2' color='text.secondary'>
-                      {x.l}
-                    </Typography>
-                  </Stack>
-                  <Typography sx={{ fontSize: 22, fontWeight: 700, mt: 1 }}>
-                    {money2(x.v)}
-                  </Typography>
-                  <Typography variant='caption' color='text.secondary'>
-                    ≈ {uzs(x.v)}
-                  </Typography>
-                </Card>
-              </Grid>
-            ))}
-            <Grid item xs={12} sm={6} lg={3}>
-              <Card
-                sx={{
-                  p: 2.25,
-                  height: '100%',
-                  background: 'linear-gradient(135deg,#2f6fed,#6d4af2)',
-                  border: 0,
-                  color: '#fff',
-                }}
-              >
-                <Typography variant='body2' sx={{ opacity: 0.85 }}>
-                  Себестоимость сделки
-                </Typography>
-                <Typography sx={{ fontSize: 22, fontWeight: 700, mt: 1 }}>
-                  {money2(res.landed)}
-                </Typography>
-                <Typography variant='caption' sx={{ opacity: 0.85 }}>
-                  ≈ {uzs(res.landed)}
-                </Typography>
-              </Card>
-            </Grid>
-          </Grid>
-
-          <Card sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant='h3' sx={{ mb: 1.5 }}>
-              Структура себестоимости
-            </Typography>
-            <Box
-              role='img'
-              aria-label='Структура себестоимости'
-              sx={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', mb: 1.5 }}
-            >
-              {[
-                [res.goods, '#2f6fed'],
-                [res.logistics, '#0d9488'],
-                [res.payments, '#d97706'],
-              ].map(([v, c], i) => (
-                <Box
-                  key={i}
-                  sx={{ width: `${(Number(v) / (res.landed || 1)) * 100}%`, bgcolor: String(c) }}
-                />
-              ))}
-            </Box>
-            <Stack direction='row' spacing={3} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
-              {[
-                ['Пошлина', res.totals.duty],
-                ['Акциз', res.totals.excise],
-                ['НДС 12%', res.totals.vat],
-                ['Таможенный сбор', res.totals.fee],
-              ].map(([k, v]) => (
-                <Typography key={String(k)} variant='body2'>
-                  <Box component='span' sx={{ color: 'text.secondary' }}>
-                    {k}:
-                  </Box>{' '}
-                  <b>{money2(Number(v))}</b>
-                </Typography>
-              ))}
-            </Stack>
-          </Card>
-
-          <Card sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant='h3' sx={{ mb: 1.5 }}>
-              Пошлины и налоги по позициям
-            </Typography>
-            <TableContainer>
-              <Table size='small' sx={{ minWidth: 820 }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Товар</TableCell>
-                    <TableCell>ТН ВЭД</TableCell>
-                    <TableCell align='right'>
-                      <Term tip='Стоимость товара + фрахт и страхование до границы'>
-                        Там. стоимость
-                      </Term>
-                    </TableCell>
-                    <TableCell align='right'>Пошлина</TableCell>
-                    <TableCell align='right'>Акциз</TableCell>
-                    <TableCell align='right'>НДС</TableCell>
-                    <TableCell align='right'>Себестоимость</TableCell>
-                    <TableCell align='right'>За ед.</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {res.lines.map((l) => (
-                    <TableRow key={l.p.id} hover>
-                      <TableCell>
-                        {l.p.name || '—'}
-                        <Typography
-                          variant='caption'
-                          color='text.secondary'
-                          sx={{ display: 'block' }}
-                        >
-                          {l.p.qty} шт.
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        {l.p.hs || '—'}{' '}
-                        {!l.hsKnown && (
-                          <Tooltip title='Код не найден — применена ставка 10%'>
-                            <Chip
-                              size='small'
-                              color='warning'
-                              label='проверьте'
-                              sx={{ height: 18, ml: 0.5 }}
-                            />
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                      <TableCell align='right'>{num(l.customsValue)}</TableCell>
-                      <TableCell align='right'>
-                        {num(l.duty)}
-                        <Typography
-                          variant='caption'
-                          color='text.secondary'
-                          sx={{ display: 'block' }}
-                        >
-                          {num(l.dutyRate, 1)}%
-                        </Typography>
-                      </TableCell>
-                      <TableCell align='right'>{num(l.excise)}</TableCell>
-                      <TableCell align='right'>{num(l.vat)}</TableCell>
-                      <TableCell align='right' sx={{ fontWeight: 600 }}>
-                        {num(l.landed)}
-                      </TableCell>
-                      <TableCell align='right' sx={{ fontWeight: 600, color: 'primary.main' }}>
-                        {num(l.unitCost)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1.5 }}>
-              Суммы в {cur}. Расчёт ознакомительный и выполнен по демо-ставкам; окончательные
-              платежи определяет таможенный орган.
-            </Typography>
-          </Card>
-
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap' }}>
-            <Button
-              variant='outlined'
-              color='inherit'
-              startIcon={<ArrowLeft size={16} />}
-              onClick={() => set({ step: 0 })}
-            >
-              Изменить данные
-            </Button>
-            <Box sx={{ flex: 1 }} />
-            <Button
-              variant='outlined'
-              startIcon={<FileSpreadsheet size={16} />}
-              onClick={exportCsv}
-            >
-              Экспорт в Excel
-            </Button>
-            <Button variant='outlined' startIcon={<FolderDown size={16} />} onClick={saveToDocs}>
-              Сохранить в документы
-            </Button>
-            <Button variant='contained' startIcon={<Send size={16} />} onClick={toApplication}>
-              Оформить заявку
-            </Button>
-          </Stack>
-        </Stack>
+        resultsView
       )}
     </>
   );

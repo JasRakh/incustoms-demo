@@ -160,7 +160,7 @@ export function OcrExcel() {
       JSON.stringify(ROWS.map(({ conf: _c, ...p }) => ({ ...p, id: uid() })))
     );
     sessionStorage.removeItem('incustoms-calc');
-    nav('/tools/calculator');
+    nav(state.role === 'declarant' ? '/declarant/calculator' : '/tools/calculator');
   };
 
   const removeOrder = (id: string) => {

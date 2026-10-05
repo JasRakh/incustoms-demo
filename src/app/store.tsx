@@ -8,10 +8,32 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { State } from '@/types';
+import type { DeclStatus, State } from '@/types';
 import { DECL_MENU_DEFAULT, initialState, MENU_DEFAULT } from '@/data/mock';
 
 const KEY = 'incustoms-demo-state-v1';
+
+const DECL_STATUSES = [
+  'new',
+  'draft',
+  'in_work',
+  'validation',
+  'checked',
+  'to_export',
+  'export',
+  'submitted',
+  'accepted',
+  'released',
+  'completed',
+  'rejected',
+  'error',
+  'ktd',
+];
+
+function normalizeDeclStatus(status: string): DeclStatus {
+  if (status === 'sent') return 'submitted';
+  return (DECL_STATUSES.includes(status) ? status : 'draft') as DeclStatus;
+}
 
 function load(): State {
   try {
@@ -32,6 +54,12 @@ function load(): State {
       ) {
         s.declMenuOrder = [...DECL_MENU_DEFAULT];
       }
+      s.declarations = (s.declarations ?? []).map((d) => ({
+        ...d,
+        status: normalizeDeclStatus(d.status),
+        amount: Number(d.amount) || 0,
+        history: (d.history ?? []).map((h) => ({ ...h, status: normalizeDeclStatus(h.status) })),
+      }));
       s.aziza = s.aziza.filter((m) => !m.typing);
       s.tasks = s.tasks.map((x) => (x.status === 'aziza' ? { ...x, status: 'todo' } : x));
       return s;

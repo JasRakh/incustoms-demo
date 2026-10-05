@@ -53,6 +53,7 @@ const SECTION: Record<string, string> = {
   help: 'Помощь и обучение',
   declarant: 'АИС Декларант',
 };
+
 const SUB: Record<string, string> = {
   calculator: 'Калькулятор сделки',
   ocr: 'OCR → Excel',
@@ -73,6 +74,13 @@ const SUB: Record<string, string> = {
   reports: 'Отчёты',
 };
 
+function roleLink(to: string, role: string) {
+  if (role !== 'declarant') return to;
+  if (to.startsWith('/finance')) return to.replace('/finance', '/declarant/finance');
+  if (to.includes('tab=dialogs')) return to.replace('/applications', '/declarant/communications');
+  return to.startsWith('/declarant') ? to : '/declarant';
+}
+
 function useCrumbs() {
   const { pathname } = useLocation();
   const [params] = useSearchParams();
@@ -86,7 +94,8 @@ function useCrumbs() {
       : undefined;
   const sub = segs[1] ?? params.get('tab');
   if (declItem) {
-    crumbs.push({ label: declItem.text! });
+    crumbs.push({ label: declItem.text!, to: declItem.path });
+    if (segs[2]) crumbs.push({ label: 'Декларация' });
     return crumbs;
   }
   if (sub && SUB[sub]) crumbs.push({ label: SUB[sub] });
@@ -317,7 +326,7 @@ export function Topbar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
                     if (x) x.read = true;
                   });
                   setNotifEl(null);
-                  nav(n.to);
+                  nav(roleLink(n.to, state.role));
                 }}
               >
                 <ListItemIcon

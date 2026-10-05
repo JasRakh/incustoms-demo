@@ -9,9 +9,7 @@ export function Logo({ compact = false, height = 30 }: { compact?: boolean; heig
         display: 'inline-flex',
         alignItems: 'center',
         maxWidth: '100%',
-        ...(theme.palette.mode === 'dark'
-          ? { bgcolor: '#fff', borderRadius: 2, px: 1, py: 0.5 }
-          : {}),
+        ...(theme.palette.mode === 'dark' ? { bgcolor: '#fff', borderRadius: 2, px: 1 } : {}),
       })}
     >
       <Box

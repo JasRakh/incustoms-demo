@@ -147,6 +147,87 @@ export interface AzizaSettings {
   country: string;
 }
 
+export type DeclStatus =
+  | 'new'
+  | 'draft'
+  | 'in_work'
+  | 'validation'
+  | 'checked'
+  | 'to_export'
+  | 'export'
+  | 'submitted'
+  | 'accepted'
+  | 'released'
+  | 'completed'
+  | 'rejected'
+  | 'error'
+  | 'ktd';
+
+export interface GtdPayRow {
+  id: string;
+  kind: string;
+  base: number;
+  rate: number;
+  sp: string;
+}
+
+export interface GtdItem {
+  id: string;
+  name: string;
+  hs: string;
+  origin: string;
+  qty: number;
+  weight: number;
+  value: number;
+  extra?: Record<string, string>;
+  ai?: string[];
+  payRows?: GtdPayRow[];
+}
+
+export interface GtdDoc {
+  id: string;
+  code: string;
+  number: string;
+  date: string;
+}
+
+export interface GtdEdit {
+  at: string;
+  field: string;
+  from: string;
+  to: string;
+}
+
+export interface GtdVersion {
+  id: string;
+  at: string;
+  label: string;
+  form: Record<string, string>;
+  items: GtdItem[];
+  docs: GtdDoc[];
+}
+
+export interface Declaration {
+  id: string;
+  orderNo: string;
+  gtdNo: string;
+  status: DeclStatus;
+  exporter: string;
+  importer: string;
+  goods: number;
+  amount: number;
+  createdAt: string;
+  updatedAt: string;
+  verified: boolean;
+  history: { status: DeclStatus; at: string }[];
+  form?: Record<string, string>;
+  items?: GtdItem[];
+  docs?: GtdDoc[];
+  edits?: GtdEdit[];
+  versions?: GtdVersion[];
+  aiFields?: string[];
+}
+
 export interface State {
   lang: Lang;
   mode: 'light' | 'dark';
@@ -161,6 +242,7 @@ export interface State {
   applications: Application[];
   dialogs: Dialog[];
   customsRequests: CustomsRequest[];
+  declarations: Declaration[];
   aziza: Message[];
   azizaSettings: AzizaSettings;
   tasks: Task[];

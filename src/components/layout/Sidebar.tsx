@@ -57,7 +57,7 @@ export function Sidebar({ mobileOpen, onClose }: Props) {
   const counts = useNavCounts();
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
-  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const name = (it: NavItem) => it.text ?? t(it.label!);
   const collapsed = state.collapsed && !isMobile;
   const isUser = state.role === 'user';
@@ -285,7 +285,7 @@ export function Sidebar({ mobileOpen, onClose }: Props) {
         {!isUser &&
           DECLARANT_GROUPS.map((g) => {
             const GIcon = g.icon;
-            const open = !closedGroups[g.key];
+            const open = openGroups[g.key] ?? g.items.some((it) => isActive(it));
             const inner = (
               <List
                 disablePadding
@@ -308,7 +308,7 @@ export function Sidebar({ mobileOpen, onClose }: Props) {
             return (
               <Box key={g.key} sx={{ mt: 1.5 }}>
                 <ListItemButton
-                  onClick={() => setClosedGroups((c) => ({ ...c, [g.key]: open }))}
+                  onClick={() => setOpenGroups((c) => ({ ...c, [g.key]: !open }))}
                   aria-expanded={open}
                   sx={{ py: 1, gap: 1.25 }}
                 >

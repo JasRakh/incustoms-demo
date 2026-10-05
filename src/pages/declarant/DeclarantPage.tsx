@@ -1,16 +1,30 @@
-import { Box, Button, Card, Chip, Grid, Stack, Typography } from '@mui/material';
-import { BarChart3, Database, FileCheck2, Hammer, Users } from 'lucide-react';
+import { Box, Button, Card, Chip, Stack, Typography } from '@mui/material';
+import { Hammer } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DECLARANT_ALL } from '@/app/nav';
 import { useStore } from '@/app/store';
 import { PageHeader } from '@/components/common/PageHeader';
-import { StatCard } from '@/components/common/StatCard';
+import { CommunicationsPage } from '@/pages/declarant/CommunicationsPage';
+import { GtdEditor } from '@/pages/declarant/gtd/GtdEditor';
+import { DeclarationsPage } from '@/pages/declarant/DeclarationsPage';
+import { FinancePage } from '@/pages/finance/FinancePage';
+import { WorkspacePage } from '@/pages/declarant/WorkspacePage';
+import { DealCalculator } from '@/pages/tools/DealCalculator';
+import { OcrExcel } from '@/pages/tools/OcrExcel';
 
 export function DeclarantPage() {
   const { update } = useStore();
   const nav = useNavigate();
   const { pathname } = useLocation();
   const sub = pathname.split('/')[2] ?? '';
+  if (sub === 'communications') return <CommunicationsPage />;
+  if (sub === 'ocr') return <OcrExcel />;
+  if (sub === 'finance') return <FinancePage />;
+  const gtdId = pathname.split('/')[3];
+  if (sub === 'declarations' && gtdId) return <GtdEditor id={gtdId} />;
+  if (sub === 'declarations') return <DeclarationsPage />;
+  if (sub === 'calculator') return <DealCalculator variant='declarant' />;
+  if (sub === '') return <WorkspacePage />;
   return (
     <>
       <PageHeader
@@ -21,22 +35,6 @@ export function DeclarantPage() {
         subtitle='Интерфейс декларанта, связанный с АИС'
         actions={<Chip label='В разработке' sx={{ bgcolor: '#fef3c7', color: '#854d0e' }} />}
       />
-      {sub === '' && (
-        <Grid container spacing={1.5} sx={{ mb: 3 }}>
-          <Grid item xs={6} md={3}>
-            <StatCard icon={<FileCheck2 size={15} />} label='Декларации в работе' value='—' />
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <StatCard icon={<Users size={15} />} label='Клиенты' value='—' />
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <StatCard icon={<Database size={15} />} label='Статус АИС' value='—' />
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <StatCard icon={<BarChart3 size={15} />} label='Выпуск за месяц' value='—' />
-          </Grid>
-        </Grid>
-      )}
       <Card sx={{ p: { xs: 3, md: 6 }, textAlign: 'center' }}>
         <Box
           sx={{

@@ -17,9 +17,10 @@ import {
   Typography,
   type TextFieldProps,
 } from '@mui/material';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
 import { CircleCheck, Trash2, TriangleAlert } from 'lucide-react';
 import { num } from '@/lib/format';
+import { NumberInput } from '@/components/common/NumberInput';
 import { Term } from '@/components/common/Term';
 import { hsInfo, type Position } from '@/pages/tools/calcModel';
 
@@ -108,6 +109,10 @@ function DutyChip({ hs }: { hs: string }) {
   );
 }
 
+function NumberCell(props: ComponentProps<typeof NumberInput>) {
+  return <NumberInput size='small' fullWidth align='right' sx={cellInputSx} {...props} />;
+}
+
 const numberProps = (label: string, step = 1) => ({
   'aria-label': label,
   min: 0,
@@ -150,8 +155,6 @@ function PositionsView({
   const totalSum = positions.reduce((s, p) => s + p.qty * p.unitPrice, 0);
   const totalQty = positions.reduce((s, p) => s + p.qty, 0);
   const totalWeight = positions.reduce((s, p) => s + p.qty * p.weight, 0);
-  const setNum = (id: string, key: 'qty' | 'unitPrice' | 'weight', v: string) =>
-    onChange(id, { [key]: Math.max(0, Number(v) || 0) });
 
   if (compact) {
     return (
@@ -183,11 +186,9 @@ function PositionsView({
                 <Typography variant='caption' color='text.secondary'>
                   Кол-во
                 </Typography>
-                <Cell
-                  align='right'
-                  type='number'
+                <NumberCell
                   value={p.qty}
-                  onChange={(e) => setNum(p.id, 'qty', e.target.value)}
+                  onValueChange={(n) => onChange(p.id, { qty: n })}
                   inputProps={numberProps('Количество')}
                 />
               </Box>
@@ -195,11 +196,9 @@ function PositionsView({
                 <Typography variant='caption' color='text.secondary'>
                   Цена, {currency}
                 </Typography>
-                <Cell
-                  align='right'
-                  type='number'
+                <NumberCell
                   value={p.unitPrice}
-                  onChange={(e) => setNum(p.id, 'unitPrice', e.target.value)}
+                  onValueChange={(n) => onChange(p.id, { unitPrice: n })}
                   inputProps={numberProps('Цена', 0.01)}
                 />
               </Box>
@@ -207,11 +206,9 @@ function PositionsView({
                 <Typography variant='caption' color='text.secondary'>
                   Вес ед., кг
                 </Typography>
-                <Cell
-                  align='right'
-                  type='number'
+                <NumberCell
                   value={p.weight}
-                  onChange={(e) => setNum(p.id, 'weight', e.target.value)}
+                  onValueChange={(n) => onChange(p.id, { weight: n })}
                   inputProps={numberProps('Вес', 0.1)}
                 />
               </Box>
@@ -292,29 +289,23 @@ function PositionsView({
                 <HsField p={p} onChange={onChange} />
               </TableCell>
               <TableCell>
-                <Cell
-                  align='right'
-                  type='number'
+                <NumberCell
                   value={p.qty}
-                  onChange={(e) => setNum(p.id, 'qty', e.target.value)}
+                  onValueChange={(n) => onChange(p.id, { qty: n })}
                   inputProps={numberProps('Количество')}
                 />
               </TableCell>
               <TableCell>
-                <Cell
-                  align='right'
-                  type='number'
+                <NumberCell
                   value={p.unitPrice}
-                  onChange={(e) => setNum(p.id, 'unitPrice', e.target.value)}
+                  onValueChange={(n) => onChange(p.id, { unitPrice: n })}
                   inputProps={numberProps('Цена', 0.01)}
                 />
               </TableCell>
               <TableCell>
-                <Cell
-                  align='right'
-                  type='number'
+                <NumberCell
                   value={p.weight}
-                  onChange={(e) => setNum(p.id, 'weight', e.target.value)}
+                  onValueChange={(n) => onChange(p.id, { weight: n })}
                   inputProps={numberProps('Вес', 0.1)}
                 />
               </TableCell>

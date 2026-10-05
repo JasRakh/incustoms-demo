@@ -27,7 +27,8 @@ export interface CalcState {
   fileName?: string;
   positions: Position[];
   costs: Costs;
-  step: 0 | 1;
+  step: 0 | 1 | 2;
+  calculated?: boolean;
 }
 
 export const RATES: Record<CalcState['currency'], number> = {
@@ -47,6 +48,10 @@ const HS_RATES: Record<string, { duty: number; excise: number; label: string }> 
   '3304': { duty: 10, excise: 0, label: 'Косметика' },
   '2204': { duty: 30, excise: 20, label: 'Вино' },
   '8708': { duty: 5, excise: 0, label: 'Автозапчасти' },
+  '4011': { duty: 15, excise: 0, label: 'Шины пневматические' },
+  '0901': { duty: 10, excise: 0, label: 'Кофе' },
+  '4202': { duty: 15, excise: 0, label: 'Чехлы, сумки' },
+  '8504': { duty: 5, excise: 0, label: 'Зарядные устройства' },
 };
 
 export function hsInfo(hs: string) {
