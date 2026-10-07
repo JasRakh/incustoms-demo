@@ -77,7 +77,12 @@ function loadCalc(): CalcState {
       };
     }
     const raw = sessionStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as CalcState;
+    if (raw) {
+      const saved = JSON.parse(raw) as CalcState;
+      return saved.costs.base === 'qty'
+        ? saved
+        : { ...saved, costs: { ...saved.costs, base: 'value' } };
+    }
   } catch {
     /* storage unavailable */
   }
@@ -744,7 +749,6 @@ export function DealCalculator({ variant = 'user' }: { variant?: 'user' | 'decla
                   onChange={(e) => setCost('base', e.target.value as Costs['base'])}
                 >
                   <MenuItem value='value'>По стоимости</MenuItem>
-                  <MenuItem value='weight'>По весу</MenuItem>
                   <MenuItem value='qty'>По количеству</MenuItem>
                 </TextField>
               </Grid>

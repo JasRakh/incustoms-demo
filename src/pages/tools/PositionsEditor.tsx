@@ -1,7 +1,6 @@
 import {
   Box,
   Card,
-  Chip,
   IconButton,
   InputAdornment,
   Stack,
@@ -87,28 +86,6 @@ function HsField({ p, onChange }: { p: Position; onChange: Props['onChange'] }) 
   );
 }
 
-function DutyChip({ hs }: { hs: string }) {
-  const info = hsInfo(hs);
-  if (!hs)
-    return (
-      <Typography variant='body2' color='text.disabled'>
-        —
-      </Typography>
-    );
-  return (
-    <Chip
-      size='small'
-      label={info ? `${info.duty}%` : '10%*'}
-      sx={{
-        height: 22,
-        bgcolor: info ? 'action.hover' : '#fef3c7',
-        color: info ? 'text.primary' : '#854d0e',
-        fontWeight: 600,
-      }}
-    />
-  );
-}
-
 function NumberCell(props: ComponentProps<typeof NumberInput>) {
   return <NumberInput size='small' fullWidth align='right' sx={cellInputSx} {...props} />;
 }
@@ -154,7 +131,6 @@ function PositionsView({
 }: Props & { compact: boolean }) {
   const totalSum = positions.reduce((s, p) => s + p.qty * p.unitPrice, 0);
   const totalQty = positions.reduce((s, p) => s + p.qty, 0);
-  const totalWeight = positions.reduce((s, p) => s + p.qty * p.weight, 0);
 
   if (compact) {
     return (
@@ -178,7 +154,7 @@ function PositionsView({
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
               <Box sx={{ gridColumn: '1 / -1' }}>
                 <Typography variant='caption' color='text.secondary'>
-                  ТН ВЭД
+                  Код ТН ВЭД
                 </Typography>
                 <HsField p={p} onChange={onChange} />
               </Box>
@@ -194,7 +170,7 @@ function PositionsView({
               </Box>
               <Box>
                 <Typography variant='caption' color='text.secondary'>
-                  Цена, {currency}
+                  Цена/ед.
                 </Typography>
                 <NumberCell
                   value={p.unitPrice}
@@ -202,17 +178,7 @@ function PositionsView({
                   inputProps={numberProps('Цена', 0.01)}
                 />
               </Box>
-              <Box>
-                <Typography variant='caption' color='text.secondary'>
-                  Вес ед., кг
-                </Typography>
-                <NumberCell
-                  value={p.weight}
-                  onValueChange={(n) => onChange(p.id, { weight: n })}
-                  inputProps={numberProps('Вес', 0.1)}
-                />
-              </Box>
-              <Box sx={{ textAlign: 'right', alignSelf: 'end', pb: 0.75 }}>
+              <Box sx={{ gridColumn: '1 / -1', textAlign: 'right' }}>
                 <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
                   Сумма
                 </Typography>
@@ -223,7 +189,7 @@ function PositionsView({
         ))}
         <Stack direction='row' justifyContent='space-between' sx={{ px: 1.5, pt: 0.5 }}>
           <Typography variant='body2' color='text.secondary'>
-            {totalQty} шт · {num(totalWeight, 1)} кг
+            {totalQty} шт
           </Typography>
           <Typography fontWeight={700}>
             {num(totalSum)} {currency}
@@ -248,27 +214,19 @@ function PositionsView({
           <col />
           <col style={{ width: 180 }} />
           <col style={{ width: 92 }} />
-          <col style={{ width: 112 }} />
-          <col style={{ width: 100 }} />
-          <col style={{ width: 84 }} />
+          <col style={{ width: 120 }} />
           <col style={{ width: 128 }} />
           <col style={{ width: 48 }} />
         </colgroup>
         <TableHead>
           <TableRow>
             <TableCell>#</TableCell>
-            <TableCell>Товар</TableCell>
+            <TableCell>Наименование</TableCell>
             <TableCell>
-              <Term tip='Код товара по ТН ВЭД определяет ставку пошлины'>ТН ВЭД</Term>
+              <Term tip='Код товара по ТН ВЭД определяет ставку пошлины'>Код ТН ВЭД</Term>
             </TableCell>
             <TableCell align='right'>Кол-во</TableCell>
-            <TableCell align='right'>Цена, {currency}</TableCell>
-            <TableCell align='right'>Вес ед., кг</TableCell>
-            <TableCell align='center'>
-              <Term tip='Ставка пошлины по коду ТН ВЭД (демо-база). * — код не найден, применена ставка 10%'>
-                Пошлина
-              </Term>
-            </TableCell>
+            <TableCell align='right'>Цена/ед.</TableCell>
             <TableCell align='right'>Сумма, {currency}</TableCell>
             <TableCell />
           </TableRow>
@@ -302,16 +260,7 @@ function PositionsView({
                   inputProps={numberProps('Цена', 0.01)}
                 />
               </TableCell>
-              <TableCell>
-                <NumberCell
-                  value={p.weight}
-                  onValueChange={(n) => onChange(p.id, { weight: n })}
-                  inputProps={numberProps('Вес', 0.1)}
-                />
-              </TableCell>
-              <TableCell align='center'>
-                <DutyChip hs={p.hs} />
-              </TableCell>
+
               <TableCell
                 align='right'
                 sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
@@ -343,13 +292,6 @@ function PositionsView({
             <TableCell />
             <TableCell align='right' sx={{ fontVariantNumeric: 'tabular-nums' }}>
               {totalQty}
-            </TableCell>
-            <TableCell />
-            <TableCell
-              align='right'
-              sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary !important' }}
-            >
-              {num(totalWeight, 1)} кг
             </TableCell>
             <TableCell />
             <TableCell

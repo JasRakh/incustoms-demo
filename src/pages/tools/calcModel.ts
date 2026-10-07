@@ -17,7 +17,7 @@ export interface Costs {
   other: number;
   bankPct: number;
   financePct: number;
-  base: 'value' | 'weight' | 'qty';
+  base: 'value' | 'qty';
   origin: 'none' | 'st1' | 'forma';
 }
 
@@ -74,9 +74,34 @@ export const emptyCosts: Costs = {
 };
 
 export const SAMPLE_POSITIONS: Omit<Position, 'id'>[] = [
-  { name: 'Смартфон, 128 ГБ', hs: '8517 13 000 0', qty: 20, unitPrice: 180, weight: 0.4 },
-  { name: 'Беспроводные наушники', hs: '8518 30 000 0', qty: 50, unitPrice: 22, weight: 0.15 },
-  { name: 'Монитор 27"', hs: '8528 52 100 0', qty: 10, unitPrice: 140, weight: 6.5 },
+  {
+    name: 'Шовные материалы хирургические стерильные, натуральные и синтетические',
+    hs: '',
+    qty: 1,
+    unitPrice: 38.84,
+    weight: 0,
+  },
+  {
+    name: 'Шовные материалы хирургические стерильные, натуральные и синтетические',
+    hs: '',
+    qty: 100,
+    unitPrice: 38.77,
+    weight: 0,
+  },
+  {
+    name: 'Сетка ULTRAPRO™ хирургическая композиционная',
+    hs: '',
+    qty: 10,
+    unitPrice: 179.86,
+    weight: 0,
+  },
+  {
+    name: 'Нити хирургические стерильные, синтетические, рассасывающиеся',
+    hs: '',
+    qty: 50,
+    unitPrice: 36.8,
+    weight: 0,
+  },
 ];
 
 export interface LineResult {
@@ -108,8 +133,7 @@ export interface CalcResult {
 export function calculate(s: CalcState): CalcResult {
   const pos = s.positions.filter((p) => p.qty > 0 && p.unitPrice > 0);
   const goodsOf = (p: Position) => p.qty * p.unitPrice;
-  const baseOf = (p: Position) =>
-    s.costs.base === 'value' ? goodsOf(p) : s.costs.base === 'weight' ? p.weight * p.qty : p.qty;
+  const baseOf = (p: Position) => (s.costs.base === 'qty' ? p.qty : goodsOf(p));
   const totalBase = pos.reduce((a, p) => a + baseOf(p), 0) || 1;
   const c = s.costs;
   const border = c.freight + c.insurance;

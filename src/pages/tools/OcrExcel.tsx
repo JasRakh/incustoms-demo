@@ -41,11 +41,7 @@ import { CALC_IMPORT_KEY } from '@/pages/tools/DealCalculator';
 import { SAMPLE_POSITIONS } from '@/pages/tools/calcModel';
 import type { OcrOrder } from '@/types';
 
-const ROWS = [
-  ...SAMPLE_POSITIONS.map((p) => ({ ...p, conf: 0 })),
-  { name: 'Чехол для смартфона', hs: '4202 32 000 0', qty: 100, unitPrice: 2.5, weight: 0.05 },
-  { name: 'Зарядное устройство USB-C', hs: '8504 40 300 0', qty: 40, unitPrice: 6, weight: 0.1 },
-].map((r, i) => ({ ...r, conf: [98, 96, 93, 81, 95][i] }));
+const ROWS = SAMPLE_POSITIONS.map((r, i) => ({ ...r, conf: [98, 97, 86, 95][i] }));
 
 const ORDER_STATUS: Record<OcrOrder['status'], { l: string; t: 'gray' | 'blue' | 'green' }> = {
   created: { l: 'Создан', t: 'gray' },
